@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM adoptopenjdk/openjdk11-openj9:x86_64-ubuntu-jdk-11.0.1.13
 LABEL maintainer="Cyrille Le Clerc <cleclerc@cloudbees.com>"
 
 #
@@ -46,10 +46,9 @@ RUN apt-get update -qqy \
 #========================
 RUN apt-get update -qqy \
   && apt-get -qqy --no-install-recommends install \
-    iproute \
+    iproute2 \
     openssh-client ssh-askpass\
     ca-certificates \
-    openjdk-8-jdk \
     tar zip unzip \
     wget curl \
     git \
@@ -59,11 +58,11 @@ RUN apt-get update -qqy \
     python python-pip groff \
     rlwrap \
     rsync \
-  && rm -rf /var/lib/apt/lists/* \
-  && sed -i 's/securerandom\.source=file:\/dev\/random/securerandom\.source=file:\/dev\/urandom/' ./usr/lib/jvm/java-8-openjdk-amd64/jre/lib/security/java.security
+    gpg-agent \
+  && rm -rf /var/lib/apt/lists/*
 
 # workaround https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=775775
-RUN [ -f "/etc/ssl/certs/java/cacerts" ] || /var/lib/dpkg/info/ca-certificates-java.postinst configure
+#UN [ -f "/etc/ssl/certs/java/cacerts" ] || /var/lib/dpkg/info/ca-certificates-java.postinst configure
 
 # workaround "You are using pip version 8.1.1, however version 9.0.1 is available."
 RUN pip install --upgrade pip setuptools
@@ -71,7 +70,7 @@ RUN pip install --upgrade pip setuptools
 #==========
 # Maven
 #==========
-ENV MAVEN_VERSION 3.5.4
+ENV MAVEN_VERSION 3.6.0
 
 RUN curl -fsSL http://archive.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | tar xzf - -C /usr/share \
   && mv /usr/share/apache-maven-$MAVEN_VERSION /usr/share/maven \
@@ -182,7 +181,7 @@ RUN mkdir -p /home/jenkins/.local/bin/ \
 # NODE JS
 # See https://nodejs.org/en/download/package-manager/#debian-and-ubuntu-based-linux-distributions
 #====================================
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash \
+RUN curl -sL https://deb.nodesource.com/setup_11.x | bash \
     && apt-get install -y nodejs
 
 #====================================
@@ -190,12 +189,12 @@ RUN curl -sL https://deb.nodesource.com/setup_10.x | bash \
 # https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-apt?view=azure-cli-latest
 #====================================
 
-RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ xenial main" | tee /etc/apt/sources.list.d/azure-cli.list
-RUN curl -L https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN apt-key adv --keyserver packages.microsoft.com --recv-keys 52E16F86FEE04B979B07E28DB02C46DF417A0893
-RUN apt-get -qqy --no-install-recommends install apt-transport-https \
-  && apt-get update -qqy \
-  && apt-get install -qqy --no-install-recommends azure-cli
+# RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ bionic main" | tee /etc/apt/sources.list.d/azure-cli.list
+# RUN curl -L https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+# RUN apt-key adv --keyserver packages.microsoft.com --recv-keys BC528686B50D79E339D3721CEB3E94ADBE1229CF
+# RUN apt-get -qqy --no-install-recommends install apt-transport-https \
+#   && apt-get update -qqy \
+#   && apt-get install -qqy --no-install-recommends azure-cli
 
 #====================================
 # BOWER, GRUNT, GULP
