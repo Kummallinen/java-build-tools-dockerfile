@@ -50,6 +50,7 @@ RUN apt-get update -qqy \
     openssh-client ssh-askpass\
     ca-certificates \
     openjdk-8-jdk \
+    openjfx \
     tar zip unzip \
     wget curl \
     git \
