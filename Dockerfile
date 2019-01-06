@@ -90,29 +90,6 @@ RUN curl -fsSL https://www.apache.org/dist/ant/binaries/apache-ant-$ANT_VERSION-
 
 ENV ANT_HOME /usr/share/ant
 
-#==========
-# Selenium
-#==========
-
-ENV SELENIUM_MAJOR_VERSION 3.14
-ENV SELENIUM_VERSION 3.14.0
-RUN  mkdir -p /opt/selenium \
-  && wget --no-verbose http://selenium-release.storage.googleapis.com/$SELENIUM_MAJOR_VERSION/selenium-server-standalone-$SELENIUM_VERSION.jar -O /opt/selenium/selenium-server-standalone.jar
-
-RUN pip install -U selenium
-
-# https://github.com/SeleniumHQ/docker-selenium/blob/master/StandaloneFirefox/Dockerfile
-
-ENV SCREEN_WIDTH 1360
-ENV SCREEN_HEIGHT 1020
-ENV SCREEN_DEPTH 24
-ENV DISPLAY :99.0
-
-COPY entry_point.sh /opt/bin/entry_point.sh
-COPY functions.sh /opt/bin/functions.sh
-RUN chmod +x /opt/bin/entry_point.sh \
-  && chmod +x /opt/bin/functions.sh
-
 #========================================
 # Add normal user with passwordless sudo
 #========================================
@@ -129,116 +106,7 @@ RUN apt-get update -qqy \
     xvfb \
   && rm -rf /var/lib/apt/lists/*
 
-#=========
-# Firefox
-#=========
-ARG FIREFOX_VERSION=60.2.2esr
-
-# don't install firefox with apt-get because there are some problems,
-# install the binaries downloaded from mozilla
-# see https://github.com/SeleniumHQ/docker-selenium/blob/3.0.1-fermium/NodeFirefox/Dockerfile#L13
-# workaround "D-Bus library appears to be incorrectly set up; failed to read machine uuid"
-# run "dbus-uuidgen > /var/lib/dbus/machine-id"
-
-RUN apt-get update -qqy \
-  && apt-get -qqy --no-install-recommends install firefox dbus \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
-  && wget --no-verbose -O /tmp/firefox.tar.bz2 https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VERSION/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2 \
-  && apt-get -y purge firefox \
-  && rm -rf /opt/firefox \
-  && tar -C /opt -xjf /tmp/firefox.tar.bz2 \
-  && rm /tmp/firefox.tar.bz2 \
-  && mv /opt/firefox /opt/firefox-$FIREFOX_VERSION \
-  && ln -fs /opt/firefox-$FIREFOX_VERSION/firefox /usr/bin/firefox
-
-RUN dbus-uuidgen > /var/lib/dbus/machine-id
-
-#======================
-# Firefox GECKO DRIVER
-#======================
-
-ARG GECKO_DRIVER_VERSION=v0.23.0
-RUN wget -O - "https://github.com/mozilla/geckodriver/releases/download/$GECKO_DRIVER_VERSION/geckodriver-$GECKO_DRIVER_VERSION-linux64.tar.gz" \
-      | tar -xz -C /usr/bin
-
-#====================================
-# Cloud Foundry CLI
-# https://github.com/cloudfoundry/cli
-#====================================
-RUN wget -O - "http://cli.run.pivotal.io/stable?release=linux64-binary&source=github" | tar -C /usr/local/bin -zxf -
-
-#====================================
-# AWS CLI
-#====================================
-RUN pip install awscli
-
-# compatibility with CloudBees AWS CLI Plugin which expects pip to be installed as user
-RUN mkdir -p /home/jenkins/.local/bin/ \
-  && ln -s /usr/bin/pip /home/jenkins/.local/bin/pip \
-  && chown -R jenkins:jenkins /home/jenkins/.local
-
-#====================================
-# NODE JS
-# See https://nodejs.org/en/download/package-manager/#debian-and-ubuntu-based-linux-distributions
-#====================================
-RUN curl -sL https://deb.nodesource.com/setup_11.x | bash \
-    && apt-get install -y nodejs
-
-#====================================
-# AZURE CLI
-# https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-apt?view=azure-cli-latest
-#====================================
-
-# RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ bionic main" | tee /etc/apt/sources.list.d/azure-cli.list
-# RUN curl -L https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-# RUN apt-key adv --keyserver packages.microsoft.com --recv-keys BC528686B50D79E339D3721CEB3E94ADBE1229CF
-# RUN apt-get -qqy --no-install-recommends install apt-transport-https \
-#   && apt-get update -qqy \
-#   && apt-get install -qqy --no-install-recommends azure-cli
-
-#====================================
-# BOWER, GRUNT, GULP
-#====================================
-
-RUN npm install --global grunt-cli@1.3.1 bower@1.8.4 gulp@4.0.0
-
-#====================================
-# Kubernetes CLI
-# See http://kubernetes.io/v1.0/docs/getting-started-guides/aws/kubectl.html
-#====================================
-RUN curl https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
-
-#====================================
-# OPENSHIFT V3 CLI
-# Only install "oc" executable, don't install "openshift", "oadmin"...
-# See https://github.com/openshift/origin/releases
-#====================================
-RUN mkdir /var/tmp/openshift \
-      && wget -O - "https://github.com/openshift/origin/releases/download/v3.10.0/openshift-origin-client-tools-v3.10.0-dd10d17-linux-64bit.tar.gz" \
-      | tar -C /var/tmp/openshift --strip-components=1 -zxf - \
-      && mv /var/tmp/openshift/oc /usr/local/bin \
-      && rm -rf /var/tmp/openshift
-
-#====================================
-# JMETER
-#====================================
-RUN mkdir /opt/jmeter \
-      && wget -O - "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.0.tgz" \
-      | tar -xz --strip=1 -C /opt/jmeter
-
-#====================================
-# MYSQL CLIENT
-#====================================
-RUN apt-get update -qqy \
-  && apt-get -qqy --no-install-recommends install \
-    mysql-client \
-  && rm -rf /var/lib/apt/lists/*
-
 USER jenkins
 
 # for dev purpose
 # USER root
-
-ENTRYPOINT ["/opt/bin/entry_point.sh"]
-
-EXPOSE 4444
