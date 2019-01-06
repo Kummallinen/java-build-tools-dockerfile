@@ -92,77 +92,6 @@ RUN curl -fsSL https://www.apache.org/dist/ant/binaries/apache-ant-$ANT_VERSION-
 
 ENV ANT_HOME /usr/share/ant
 
-#==========
-# Selenium
-#==========
-
-ENV SELENIUM_MAJOR_VERSION 3.14
-ENV SELENIUM_VERSION 3.14.0
-RUN  mkdir -p /opt/selenium \
-  && wget --no-verbose http://selenium-release.storage.googleapis.com/$SELENIUM_MAJOR_VERSION/selenium-server-standalone-$SELENIUM_VERSION.jar -O /opt/selenium/selenium-server-standalone.jar
-
-RUN pip install -U selenium
-
-# https://github.com/SeleniumHQ/docker-selenium/blob/master/StandaloneFirefox/Dockerfile
-
-ENV SCREEN_WIDTH 1360
-ENV SCREEN_HEIGHT 1020
-ENV SCREEN_DEPTH 24
-ENV DISPLAY :99.0
-
-COPY entry_point.sh /opt/bin/entry_point.sh
-COPY functions.sh /opt/bin/functions.sh
-RUN chmod +x /opt/bin/entry_point.sh \
-  && chmod +x /opt/bin/functions.sh
-
-#========================================
-# Add normal user with passwordless sudo
-#========================================
-RUN useradd jenkins --shell /bin/bash --create-home \
-  && usermod -a -G sudo jenkins \
-  && echo 'ALL ALL = (ALL) NOPASSWD: ALL' >> /etc/sudoers \
-  && echo 'jenkins:secret' | chpasswd
-
-#=====
-# XVFB
-#=====
-RUN apt-get update -qqy \
-  && apt-get -qqy --no-install-recommends install \
-    xvfb \
-  && rm -rf /var/lib/apt/lists/*
-
-#=========
-# Firefox
-#=========
-ARG FIREFOX_VERSION=60.2.2esr
-
-# don't install firefox with apt-get because there are some problems,
-# install the binaries downloaded from mozilla
-# see https://github.com/SeleniumHQ/docker-selenium/blob/3.0.1-fermium/NodeFirefox/Dockerfile#L13
-# workaround "D-Bus library appears to be incorrectly set up; failed to read machine uuid"
-# run "dbus-uuidgen > /var/lib/dbus/machine-id"
-
-RUN apt-get update -qqy \
-  && apt-get -qqy --no-install-recommends install firefox dbus \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
-  && wget --no-verbose -O /tmp/firefox.tar.bz2 https://download-installer.cdn.mozilla.net/pub/firefox/releases/$FIREFOX_VERSION/linux-x86_64/en-US/firefox-$FIREFOX_VERSION.tar.bz2 \
-  && apt-get -y purge firefox \
-  && rm -rf /opt/firefox \
-  && tar -C /opt -xjf /tmp/firefox.tar.bz2 \
-  && rm /tmp/firefox.tar.bz2 \
-  && mv /opt/firefox /opt/firefox-$FIREFOX_VERSION \
-  && ln -fs /opt/firefox-$FIREFOX_VERSION/firefox /usr/bin/firefox
-
-RUN dbus-uuidgen > /var/lib/dbus/machine-id
-
-#======================
-# Firefox GECKO DRIVER
-#======================
-
-ARG GECKO_DRIVER_VERSION=v0.23.0
-RUN wget -O - "https://github.com/mozilla/geckodriver/releases/download/$GECKO_DRIVER_VERSION/geckodriver-$GECKO_DRIVER_VERSION-linux64.tar.gz" \
-      | tar -xz -C /usr/bin
-
 #====================================
 # Cloud Foundry CLI
 # https://github.com/cloudfoundry/cli
@@ -241,6 +170,6 @@ USER jenkins
 # for dev purpose
 # USER root
 
-ENTRYPOINT ["/opt/bin/entry_point.sh"]
+# ENTRYPOINT ["/opt/bin/entry_point.sh"]
 
 EXPOSE 4444
