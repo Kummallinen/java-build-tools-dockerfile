@@ -92,6 +92,14 @@ RUN curl -fsSL https://www.apache.org/dist/ant/binaries/apache-ant-$ANT_VERSION-
 
 ENV ANT_HOME /usr/share/ant
 
+#========================================
+# Add normal user with passwordless sudo
+#========================================
+RUN useradd jenkins --shell /bin/bash --create-home \
+  && usermod -a -G sudo jenkins \
+  && echo 'ALL ALL = (ALL) NOPASSWD: ALL' >> /etc/sudoers \
+  && echo 'jenkins:secret' | chpasswd
+
 #====================================
 # Cloud Foundry CLI
 # https://github.com/cloudfoundry/cli
